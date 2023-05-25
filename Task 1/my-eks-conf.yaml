@@ -1,0 +1,112 @@
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: my-capstone-jjvteam # name of cluster
+  region: us-east-1
+  version: "1.23" # kubernetes version
+vpc: # Refer: https://github.com/weaveworks/eksctl/blob/main/examples/04-existing-vpc.yaml
+  id: "vpc-024f1a028f0f1edf4"
+  subnets:
+    public:
+      my-public-201-a:
+        id: "subnet-04a2df04667d2ee9b"
+        az: "us-east-1a"
+      my-public-201-b:
+        id: "subnet-0e23b4cfb0529ab67"
+        az: "us-east-1b"
+    private:
+      my-private-201-a:
+        id: "subnet-01f0bc46c71fbc75a"
+        az: "us-east-1a"
+      my-private-201-b:
+        id: "subnet-077fc0330aa2c9017"
+        az: "us-east-1b"
+  clusterEndpoints:
+    publicAccess:  true
+    privateAccess: true
+  nat:
+    gateway: Disable # disable since already created
+
+iam: # Refer: https://eksctl.io/usage/iamserviceaccounts/
+  withOIDC: true
+  serviceAccounts: # pre-including some common iamserviceaccounts
+  - metadata:
+      name: aws-load-balancer-controller
+      namespace: kube-system
+    wellKnownPolicies:
+      awsLoadBalancerController: true
+  - metadata:
+      name: ebs-csi-controller-sa
+      namespace: kube-system
+    wellKnownPolicies:
+      ebsCSIController: true
+  - metadata:
+      name: efs-csi-controller-sa
+      namespace: kube-system
+    wellKnownPolicies:
+      efsCSIController: true
+  - metadata:
+      name: external-dns
+      namespace: kube-system
+    wellKnownPolicies:
+      externalDNS: true
+  - metadata:
+      name: cert-manager
+      namespace: cert-manager
+    wellKnownPolicies:
+      certManager: true
+  - metadata:
+      name: cluster-autoscaler
+      namespace: kube-system
+      labels: {aws-usage: "cluster-ops"}
+    wellKnownPolicies:
+      autoScaler: true
+
+nodeGroups: # Refer: https://github.com/weaveworks/eksctl/blob/main/examples/05-advanced-nodegroups.yaml
+  - name: pvt-201-a-1
+    labels: { role: workers }
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true" # tag is needed for cluster autoscaler. Refer: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/cloudprovider/aws/README.md#auto-discovery-setup
+      k8s.io/cluster-autoscaler/my-capstone-jjvteam: "shared" # cluster name tag is optional in latest versions of EKS
+    instancesDistribution:
+      instanceTypes:
+        - t2.medium
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 3
+    privateNetworking: true # include only in private subnet
+    subnets:
+      - my-private-201-a # 1 AZ is enough for testing
+  - name: pvt-201-a-2
+    labels: { key: "value" }
+    taints:
+      - key: key
+        value: "true"
+        effect: NoSchedule
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true" # tag is needed for cluster autoscaler. Refer: https://github.com/kubernetes/autoscaler/blob/master/cluster-autoscaler/cloudprovider/aws/README.md#auto-discovery-setup
+      k8s.io/cluster-autoscaler/my-capstone-jjvteam: "shared" # cluster name tag is optional in latest versions of EKS
+    instancesDistribution:
+      instanceTypes:
+        - t2.medium
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 3
+    privateNetworking: true # include only in private subnet
+    subnets:
+      - my-private-201-a # 1 AZ is enough for testing
+  - name: pub-201-a-1
+    labels: { role: workers }
+    tags:
+      k8s.io/cluster-autoscaler/enabled: "true"
+      k8s.io/cluster-autoscaler/my-capstone-jjvteam: "shared"
+    instancesDistribution:
+      instanceTypes:
+        - t2.medium
+    desiredCapacity: 1
+    minSize: 1
+    maxSize: 3
+    subnets:
+      - my-public-201-a

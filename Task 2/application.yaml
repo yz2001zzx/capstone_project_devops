@@ -1,0 +1,63 @@
+apiVersion: v1 
+kind: Service
+metadata:
+  name: loadme
+spec:
+  type: LoadBalancer
+  selector:
+    app: loadme
+  ports:
+    - protocol: TCP
+      port: 8080 #loadbalancer
+      nodePort: 32000 
+      targetPort: 8081 # Container
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadme
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: loadme
+  template:
+    metadata:
+      name: loadme
+      labels:
+        app: loadme
+    spec:
+      containers:
+      - name: loadme
+        image: 553222892121.dkr.ecr.us-east-1.amazonaws.com/capstoneproject:latest
+        env:
+        - name: app
+          value: critical
+        resources:
+          requests:
+            memory: "400Mi"
+            cpu: .25
+          limits:
+            memory: "1Gi"
+            cpu: 1
+      tolerations: # can run on tainted node
+      - key: key
+        operator: Equal
+        value: "true"
+        effect: NoSchedule
+      affinity: # will only run on tainted node. 
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: type
+                operator: in
+                values:
+                - "true"
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 50%
+      maxUnavailable: 50%
+ 
