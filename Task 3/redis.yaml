@@ -1,0 +1,29 @@
+master:
+  persistence:
+    enabled: true
+    size: 1Gi # or the size you need
+    storageClass: "gp2" # or your desired storage class
+    path: /var/lib/redis
+
+  resources:
+    requests:
+      memory: "200Mi"
+      cpu: "200m"
+    limits:
+      memory: "200Mi"
+      cpu: "200m"
+
+  livenessProbe:
+    enabled: false
+
+  readinessProbe:
+    enabled: false
+
+
+auth:
+  ## @param auth.enabled Enable password authentication
+  ##
+  enabled: false
+
+
+
